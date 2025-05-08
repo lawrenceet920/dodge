@@ -8,7 +8,7 @@ WINDOW_WIDTH = 800
 WINDOW_HEIGHT = 600
 
 # Window Caption
-TITLE = 'My Pygame Project'
+TITLE = 'Dodge-cube'
 
 # Frame rate
 FPS = 60
