@@ -5,6 +5,8 @@
 import pygame
 import sys
 import config
+import copy
+import random 
 
 # Generic Functions
 def handle_events():
@@ -27,22 +29,46 @@ def main():
     # On Startup
     bullets = []
     player = Player_character([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [0, 0], (0, 0, 255), [25, 25])
+    reader = 'start'
+    count = config.FPS * 2
+    pattern_rounds = 0
+    danger_zone = (0, 0, config.WINDOW_WIDTH, config.WINDOW_HEIGHT)
+    shot_location = []
+
     while running:
         running = handle_events()
         screen.fill(config.BLACK)
+        pygame.draw.rect(screen, (50, 0, 0), danger_zone)
         # While Running
         player.player_input()
         player.move()
 
         # Spawn Bullets
-        keys = pygame.key.get_pressed()
-        if keys[pygame.K_SPACE]:
-            for bullet in patterns['star']:
-                bullets.append(bullet)
-
+        count -= 1
+        if count == 0:
+            if pattern_rounds == 0:
+                # New Pattern
+                new_pattern = copy.deepcopy(patterns[random.randrange(len(patterns))])
+                pattern_rounds = new_pattern[0][0]
+                count = new_pattern[0][1]
+                danger_zone = new_pattern[0][2]
+                if danger_zone == 'sniper':
+                    danger_zone = [player.pos[0]-(player.scale[0]/2), player.pos[1]-(player.scale[1]/2), 2*player.scale[0], 2*player.scale[1]]
+                    shot_location = player.pos[0]+(player.scale[0]/2), player.pos[1]+(player.scale[1]/2)
+            else:
+                # Repeat Pattern
+                reader = 1
+                for bullet in new_pattern:
+                    if reader == 1:
+                        pattern_rounds -= 1
+                        reader = 0
+                        count = new_pattern[0][1]
+                        if pattern_rounds == 0:
+                            count += config.FPS/2
+                        continue
+                    bullets.append(Bullet(bullet[0], bullet[1], bullet[2], bullet[3], shot_location))
         for this_bullet in bullets:
             if this_bullet.move():
-                print('bullet removed')
                 bullets.remove(this_bullet)
         
         for this_bullet in bullets:
@@ -61,17 +87,39 @@ def main():
     sys.exit()
 
 # Other Functions
-    
-class Bullet:
-    '''Object that can move that the player has dodge'''
+class Character:
     def __init__(self, pos, speed, color, scale):
         self.speed = speed
+        if speed[0] == 'r':
+            self.speed[0] = random.randint(5, 10)
+        if speed[1] == 'r':
+            self.speed[1] = random.randint(5, 10)
         self.color = color
         self.scale = scale
-        self.pos = [pos[0]-(scale[0]/2), pos[1]-(scale[1]/2)]
+        self.pos = []
+        if pos[0] == 'r':
+            self.pos.append(random.randint(0, config.WINDOW_WIDTH-scale[0]))
+        elif pos[0] == 'p':
+            self.pos.append('placeholder')
+        else:
+            self.pos.append(pos[0]-(scale[0]/2))
+        if pos[1] == 'r':
+            self.pos.append(random.randint(0, config.WINDOW_HEIGHT-scale[1]))
+        elif pos[1] == 'p':
+            self.pos.append('placeholder')
+        else:
+            self.pos.append(pos[1]-(scale[1]/2))
+class Bullet(Character):
+    '''Object that can move that the player has dodge'''
+    def __init__(self, pos, speed, color, scale, shot_point):
+        Character.__init__(self, pos, speed, color, scale)
+        if self.pos[0] == 'placeholder':
+            self.pos[0] = (int(shot_point[0])-scale[0])
+        if self.pos[1] == 'placeholder':
+            self.pos[1] = (int(shot_point[1])-scale[1])
     def move(self):
-        self.pos[0] += self.speed[0]
-        self.pos[1] += self.speed[1]
+        self.pos[0] = int(self.pos[0]) + self.speed[0]
+        self.pos[1] = int(self.pos[1]) + self.speed[1]
         if not(0 < self.pos[0] < config.WINDOW_WIDTH) or not(0 < self.pos[1] < config.WINDOW_HEIGHT):
             return True
         return False
@@ -82,13 +130,10 @@ class Bullet:
         return(pygame.Rect(self.pos[0], self.pos[1], self.scale[0], self.scale[1]))
     
 
-class Player_character:
+class Player_character(Character):
     '''Object that represents the player'''
     def __init__(self, pos, speed, color, scale):
-        self.speed = speed
-        self.color = color
-        self.scale = scale
-        self.pos = [pos[0]-(scale[0]/2), pos[1]-(scale[1]/2)]
+        Character.__init__(self, pos, speed, color, scale)
         self.lives = 3
         self.i_frames = 0
     def move(self):
@@ -99,19 +144,19 @@ class Player_character:
         if not(0 < self.pos[1] < config.WINDOW_HEIGHT-self.scale[1]):
             self.pos[1] -= self.speed[1]
     def player_input(self):
-        keys = pygame.key.get_pressed()
-        if (keys[pygame.K_w] and keys[pygame.K_s]) or not(keys[pygame.K_w] or keys[pygame.K_s]):
+        keys_pressed = pygame.key.get_pressed()
+        if (keys_pressed[pygame.K_w] and keys_pressed[pygame.K_s]) or not(keys_pressed[pygame.K_w] or keys_pressed[pygame.K_s]):
             self.speed[1] = 0
-        elif keys[pygame.K_w]:
+        elif keys_pressed[pygame.K_w]:
             self.speed[1] = -5
-        elif keys[pygame.K_s]:
+        elif keys_pressed[pygame.K_s]:
             self.speed[1] = 5
         
-        if (keys[pygame.K_a] and keys[pygame.K_d]) or not(keys[pygame.K_a] or keys[pygame.K_d]):
+        if (keys_pressed[pygame.K_a] and keys_pressed[pygame.K_d]) or not(keys_pressed[pygame.K_a] or keys_pressed[pygame.K_d]):
             self.speed[0] = 0
-        elif keys[pygame.K_a]:
+        elif keys_pressed[pygame.K_a]:
             self.speed[0] = -5
-        elif keys[pygame.K_d]:
+        elif keys_pressed[pygame.K_d]:
             self.speed[0] = 5
             
     def draw(self, screen):
@@ -137,6 +182,8 @@ class Player_character:
             if self.lives == 0:
                 return True
             return False
+
+
 
 # Main menu
 def main_menu():
@@ -183,19 +230,52 @@ def main_menu():
     sys.exit()
 
 # Startup
-patterns = {
-    'star' : [
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, 3], (255, 0, 0), [50, 50]),
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, -3], (255, 0, 0), [50, 50]),
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, 3], (255, 0, 0), [50, 50]),
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, -3], (255, 0, 0), [50, 50]),
+patterns = [
+    # pos, speed, color, scale
+    [ # Twin X
+        [3, config.FPS/3, (config.WINDOW_WIDTH/2-50, config.WINDOW_HEIGHT/2-50, 100, 100)],
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, 3], (255, 0, 0), [50, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, -3], (255, 0, 0), [50, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, 3], (255, 0, 0), [50, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, -3], (255, 0, 0), [50, 50]),
 
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, 5], (255, 0, 0), [50, 50]),
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, -5], (255, 0, 0), [50, 50]),
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, 5], (255, 0, 0), [50, 50]),
-        Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, -5], (255, 0, 0), [50, 50])
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, 5], (255, 0, 0), [50, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, -5], (255, 0, 0), [50, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, 5], (255, 0, 0), [50, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, -5], (255, 0, 0), [50, 50])
+    ],
+    [ # Rain
+        [20, config.FPS/10, (0, 0, config.WINDOW_WIDTH, 50)],
+        (['r', 25], [0, 'r'], (0, 0, 200), [10, 25]),
+        (['r', 25], [0, 'r'], (0, 0, 200), [10, 25]),
+        (['r', 25], [0, 'r'], (0, 0, 200), [10, 25])
+    ],
+    [ # Volly
+        [10, config.FPS/30, (0, 0, 50, config.WINDOW_HEIGHT)],
+        ([25, 'r'], ['r', 0], (200, 200, 200), [25, 10]),
+        ([25, 'r'], ['r', 0], (200, 200, 200), [25, 10]),
+        ([25, 'r'], ['r', 0], (200, 200, 200), [25, 10])
+    ],
+    [ # Plus
+        [3, config.FPS/5, (config.WINDOW_WIDTH/2-50, config.WINDOW_HEIGHT/2-50, 100, 100)],
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [7, 0], (255, 0, 0), [50, 60]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-7, 0], (255, 0, 0), [50, 60]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [0, -7], (255, 0, 0), [60, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [0, 7], (255, 0, 0), [60, 50])
+    ],
+    [ # Sniper
+        [1, config.FPS/2, 'sniper'],
+        (['p', 'p'], [10, 10], (255, 225, 0), [5, 5]),
+        (['p', 'p'], [-10, 10], (255, 225, 0), [5, 5]),
+        (['p', 'p'], [10, -10], (255, 225, 0), [5, 5]),
+        (['p', 'p'], [-10, -10], (255, 225, 0), [5, 5]),
+        
+        (['p', 'p'], [10, 0], (255, 225, 0), [5, 5]),
+        (['p', 'p'], [-10, 0], (255, 225, 0), [5, 5]),
+        (['p', 'p'], [0, -10], (255, 225, 0), [5, 5]),
+        (['p', 'p'], [-0, 10], (255, 225, 0), [5, 5])
     ]
-}
+]
 if __name__ == '__main__':
     clicked = False
     clock = pygame.time.Clock()
