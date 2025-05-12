@@ -26,6 +26,9 @@ def main():
     screen = pygame.display.set_mode((config.WINDOW_WIDTH, config.WINDOW_HEIGHT))
     pygame.display.set_caption(config.TITLE)
     running = True
+    pygame.mixer.init()
+    pygame.mixer.music.load('main-theme.ogg')
+    pygame.mixer.music.play(-1)
     # On Startup
     bullets = []
     player = Player_character([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [0, 0], (0, 0, 255), [25, 25])
