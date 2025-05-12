@@ -37,6 +37,7 @@ def main():
     pattern_rounds = 0
     danger_zone = (0, 0, config.WINDOW_WIDTH, config.WINDOW_HEIGHT)
     shot_location = []
+    new_pattern = [[10]] # Needs a [0][0] slot, '10' is to prevent a rain or volly on r1
 
     while running:
         running = handle_events()
@@ -51,7 +52,9 @@ def main():
         if count == 0:
             if pattern_rounds == 0:
                 # New Pattern
-                new_pattern = copy.deepcopy(patterns[random.randrange(len(patterns))])
+                last_pattern = new_pattern
+                while new_pattern[0][0] == last_pattern[0][0]: # this prevents duplicate rounds or simular attacks from repeating after eachother
+                    new_pattern = copy.deepcopy(patterns[random.randrange(len(patterns))]) # random.randrange(len(patterns))
                 pattern_rounds = new_pattern[0][0]
                 count = new_pattern[0][1]
                 danger_zone = new_pattern[0][2]
@@ -161,7 +164,10 @@ class Player_character(Character):
             self.speed[0] = -5
         elif keys_pressed[pygame.K_d]:
             self.speed[0] = 5
-            
+        
+        if keys_pressed[pygame.K_LSHIFT]:
+            self.speed[0] *= 2
+            self.speed[1] *= 2
     def draw(self, screen):
         if self.i_frames != 0:
             self.i_frames -= 1
@@ -248,7 +254,7 @@ patterns = [
         ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, -5], (255, 0, 0), [50, 50])
     ],
     [ # Rain
-        [20, config.FPS/10, (0, 0, config.WINDOW_WIDTH, 50)],
+        [10, config.FPS/10, (0, 0, config.WINDOW_WIDTH, 50)],
         (['r', 25], [0, 'r'], (0, 0, 200), [10, 25]),
         (['r', 25], [0, 'r'], (0, 0, 200), [10, 25]),
         (['r', 25], [0, 'r'], (0, 0, 200), [10, 25])
@@ -277,6 +283,10 @@ patterns = [
         (['p', 'p'], [-10, 0], (255, 225, 0), [5, 5]),
         (['p', 'p'], [0, -10], (255, 225, 0), [5, 5]),
         (['p', 'p'], [-0, 10], (255, 225, 0), [5, 5])
+    ],
+    [ # Grass Grows
+        [2, config.FPS/2, (0, config.WINDOW_HEIGHT-50, config.WINDOW_WIDTH, 50)],
+        (['r', config.WINDOW_HEIGHT+(config.WINDOW_HEIGHT/2)], [0, -1], (0, 255, 0), [3, config.WINDOW_HEIGHT])
     ]
 ]
 if __name__ == '__main__':
