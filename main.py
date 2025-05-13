@@ -181,13 +181,15 @@ class Player_character(Character):
             [self.pos[0], self.pos[1]],
             [self.pos[0], self.pos[1]+self.scale[1]],
             [self.pos[0]+self.scale[0], self.pos[1]+self.scale[1]],
-            [self.pos[0]+self.scale[0], self.pos[1]]
+            [self.pos[0]+self.scale[0], self.pos[1]],
+            [self.pos[0]+(self.scale[0]/2), self.pos[1]+(self.scale[1]/2)]
         ]
         return boxes
     def get_hit(self):
         if self.i_frames == 0:
             self.lives -= 1
             self.i_frames = config.FPS
+            pygame.mixer.Sound('player_hit.wav').play()
             if self.lives == 0:
                 return True
             return False
@@ -243,15 +245,15 @@ patterns = [
     # pos, speed, color, scale
     [ # Twin X
         [3, config.FPS/3, (config.WINDOW_WIDTH/2-50, config.WINDOW_HEIGHT/2-50, 100, 100)],
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, 3], (255, 0, 0), [50, 50]),
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, -3], (255, 0, 0), [50, 50]),
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, 3], (255, 0, 0), [50, 50]),
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, -3], (255, 0, 0), [50, 50]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, 3], (255, 0, 0), [20, 20]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [5, -3], (255, 0, 0), [20, 20]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, 3], (255, 0, 0), [20, 20]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-5, -3], (255, 0, 0), [20, 20]),
 
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, 5], (255, 0, 0), [50, 50]),
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, -5], (255, 0, 0), [50, 50]),
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, 5], (255, 0, 0), [50, 50]),
-        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, -5], (255, 0, 0), [50, 50])
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, 5], (255, 0, 0), [20, 20]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [3, -5], (255, 0, 0), [20, 20]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, 5], (255, 0, 0), [20, 20]),
+        ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [-3, -5], (255, 0, 0), [20, 20])
     ],
     [ # Rain
         [10, config.FPS/10, (0, 0, config.WINDOW_WIDTH, 50)],
@@ -286,7 +288,7 @@ patterns = [
     ],
     [ # Grass Grows
         [2, config.FPS/2, (0, config.WINDOW_HEIGHT-50, config.WINDOW_WIDTH, 50)],
-        (['r', config.WINDOW_HEIGHT+(config.WINDOW_HEIGHT/2)], [0, -1], (0, 255, 0), [3, config.WINDOW_HEIGHT])
+        (['r', config.WINDOW_HEIGHT+(config.WINDOW_HEIGHT/2)], [0, -1], (0, 255, 0), [5, config.WINDOW_HEIGHT])
     ],
     [ # Flame Thrower
         [2, config.FPS/2, (config.WINDOW_WIDTH-50, 0, 50, config.WINDOW_HEIGHT)],
