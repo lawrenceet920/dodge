@@ -42,7 +42,7 @@ def main():
     while running:
         running = handle_events()
         screen.fill(config.BLACK)
-        pygame.draw.rect(screen, (50, 0, 0), danger_zone)
+        pygame.draw.rect(screen, config.DANGER_RED, danger_zone)
         # While Running
         player.player_input()
         player.move()
@@ -273,7 +273,7 @@ patterns = [
         ([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [0, 7], (255, 0, 0), [60, 50])
     ],
     [ # Sniper
-        [1, config.FPS/2, 'sniper'],
+        [1, config.FPS, 'sniper'],
         (['p', 'p'], [10, 10], (255, 225, 0), [5, 5]),
         (['p', 'p'], [-10, 10], (255, 225, 0), [5, 5]),
         (['p', 'p'], [10, -10], (255, 225, 0), [5, 5]),
@@ -287,6 +287,19 @@ patterns = [
     [ # Grass Grows
         [2, config.FPS/2, (0, config.WINDOW_HEIGHT-50, config.WINDOW_WIDTH, 50)],
         (['r', config.WINDOW_HEIGHT+(config.WINDOW_HEIGHT/2)], [0, -1], (0, 255, 0), [3, config.WINDOW_HEIGHT])
+    ],
+    [ # Flame Thrower
+        [2, config.FPS/2, (config.WINDOW_WIDTH-50, 0, 50, config.WINDOW_HEIGHT)],
+        ([config.WINDOW_WIDTH-50, 'r'], [-2, -3], (200, 50, 50), [25, 25]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-1, -3], (250, 50, 50), [25, 25]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-3, 3], (220, 220, 50), [50, 50]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-2, -3], (200, 50, 50), [25, 25]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-1, 3], (250, 50, 50), [50, 50]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-3, -3], (220, 220, 50), [25, 25]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-2, 3], (200, 50, 50), [50, 50]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-1, -3], (250, 50, 50), [25, 25]),
+        ([config.WINDOW_WIDTH-50, 'r'], [-3, -3], (220, 220, 50), [25, 25])
+        
     ]
 ]
 if __name__ == '__main__':
