@@ -23,6 +23,7 @@ def handle_events():
             clicked = False
     return True
 def main():
+    global bullets
     screen = pygame.display.set_mode((config.WINDOW_WIDTH, config.WINDOW_HEIGHT))
     pygame.display.set_caption(config.TITLE)
     running = True
@@ -30,15 +31,16 @@ def main():
     pygame.mixer.music.load('main-theme.ogg')
     pygame.mixer.music.play(-1)
     # On Startup
-    bullets = []
-    player = Player_character([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [0, 0], (0, 0, 255), [25, 25])
+    player = Player_character([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], [0, 0], [0, 0, 255], [25, 25])
     reader = 'start'
     count = config.FPS * 2
     pattern_rounds = 0
     danger_zone = (0, 0, config.WINDOW_WIDTH, config.WINDOW_HEIGHT)
     shot_location = []
     new_pattern = [[10]] # Needs a [0][0] slot, '10' is to prevent a rain or volly on r1
-
+    time_passed = 0
+    bullet_repeater = 0
+    bullets = []
     while running:
         running = handle_events()
         screen.fill(config.BLACK)
@@ -47,6 +49,7 @@ def main():
         player.player_input()
         player.move()
 
+        time_passed += 1/config.FPS
         # Spawn Bullets
         count -= 1
         if count == 0:
@@ -59,8 +62,17 @@ def main():
                 count = new_pattern[0][1]
                 danger_zone = new_pattern[0][2]
                 if danger_zone == 'sniper':
-                    danger_zone = [player.pos[0]-(player.scale[0]/2), player.pos[1]-(player.scale[1]/2), 2*player.scale[0], 2*player.scale[1]]
-                    shot_location = player.pos[0]+(player.scale[0]/2), player.pos[1]+(player.scale[1]/2)
+                        danger_zone = [player.pos[0]-(player.scale[0]/2), player.pos[1]-(player.scale[1]/2), 2*player.scale[0], 2*player.scale[1]]
+                        shot_location = player.pos[0]+(player.scale[0]/2), player.pos[1]+(player.scale[1]/2)
+                elif danger_zone == 'rail-gun':
+                    danger_zone = [0, random.randint(0, config.WINDOW_HEIGHT), config.WINDOW_WIDTH, 50]
+                    shot_location = 0, danger_zone[1] + 25
+                    bullet_repeater = 2
+                elif danger_zone == 'comet':
+                    danger_zone = (0, 0, config.WINDOW_WIDTH, config.WINDOW_HEIGHT)
+                    shot_location = 'comet'
+                else:
+                    shot_location = []
             else:
                 # Repeat Pattern
                 reader = 1
@@ -73,6 +85,15 @@ def main():
                             count += config.FPS/2
                         continue
                     bullets.append(Bullet(bullet[0], bullet[1], bullet[2], bullet[3], shot_location))
+                    if bullet_repeater > 0:
+                        bullet_repeater -= 1
+                        danger_zone = new_pattern[0][2]
+                    if danger_zone == 'sniper':
+                        danger_zone = [player.pos[0]-(player.scale[0]/2), player.pos[1]-(player.scale[1]/2), 2*player.scale[0], 2*player.scale[1]]
+                        shot_location = player.pos[0]+(player.scale[0]/2), player.pos[1]+(player.scale[1]/2)
+                    elif danger_zone == 'rail-gun':
+                        danger_zone = [0, random.randint(0, config.WINDOW_HEIGHT), config.WINDOW_WIDTH, 50]
+                        shot_location = 0, danger_zone[1] + 25
         for this_bullet in bullets:
             if this_bullet.move():
                 bullets.remove(this_bullet)
@@ -82,6 +103,8 @@ def main():
                 if this_bullet.get_hitbox().collidepoint(point):
                     if player.get_hit():
                         return True
+        # Timer
+        screen.blit(pygame.font.SysFont('Arial', 40).render(f'Score: {str(int(time_passed))}', True, config.WHITE), (100, 100))
         # Draw Objects
         for this_bullet in bullets:
             this_bullet.draw(screen)
@@ -89,6 +112,7 @@ def main():
         # Limit clock to FPS & Update Screen
         pygame.display.flip()
         clock.tick(config.FPS)
+    bullets = []
     pygame.quit()
     sys.exit()
 
@@ -98,8 +122,16 @@ class Character:
         self.speed = speed
         if speed[0] == 'r':
             self.speed[0] = random.randint(5, 10)
+        elif speed[0] == 'tr':
+            self.speed[0] = 0
+            while self.speed[0] == 0:
+                self.speed[0] = random.randint(-10, 10)
         if speed[1] == 'r':
             self.speed[1] = random.randint(5, 10)
+        elif speed[1] == 'tr':
+            self.speed[1] = 0
+            while self.speed[1] == 0:
+                self.speed[1] = random.randint(-10, 10)
         self.color = color
         self.scale = scale
         self.pos = []
@@ -123,11 +155,20 @@ class Bullet(Character):
             self.pos[0] = (int(shot_point[0])-scale[0])
         if self.pos[1] == 'placeholder':
             self.pos[1] = (int(shot_point[1])-scale[1])
+        if shot_point == 'comet':
+            self.shot_point = shot_point
+        else:
+            self.shot_point = 'NA'
     def move(self):
         self.pos[0] = int(self.pos[0]) + self.speed[0]
         self.pos[1] = int(self.pos[1]) + self.speed[1]
         if not(0 < self.pos[0] < config.WINDOW_WIDTH) or not(0 < self.pos[1] < config.WINDOW_HEIGHT):
             return True
+        if self.shot_point == 'comet':
+            if (config.WINDOW_WIDTH/2)-100 < self.pos[0] < (config.WINDOW_WIDTH/2)+100:
+                for i in range(1, 10):
+                    bullets.append(Bullet([config.WINDOW_WIDTH/2, config.WINDOW_HEIGHT/2], ['tr', 'tr'], (200, 0, 0), [10, 10], 'NA'))
+                return True
         return False
 
     def draw(self, screen):
@@ -188,8 +229,10 @@ class Player_character(Character):
     def get_hit(self):
         if self.i_frames == 0:
             self.lives -= 1
-            self.i_frames = config.FPS
+            self.i_frames = config.FPS * 2
             pygame.mixer.Sound('player_hit.wav').play()
+            self.color[0] += 100
+            self.color[1] += 100
             if self.lives == 0:
                 return True
             return False
@@ -276,22 +319,22 @@ patterns = [
     ],
     [ # Sniper
         [1, config.FPS, 'sniper'],
-        (['p', 'p'], [10, 10], (255, 225, 0), [5, 5]),
-        (['p', 'p'], [-10, 10], (255, 225, 0), [5, 5]),
-        (['p', 'p'], [10, -10], (255, 225, 0), [5, 5]),
-        (['p', 'p'], [-10, -10], (255, 225, 0), [5, 5]),
+        (['p', 'p'], [10, 10], (255, 225, 0), [10, 10]),
+        (['p', 'p'], [-10, 10], (255, 225, 0), [10, 10]),
+        (['p', 'p'], [10, -10], (255, 225, 0), [10, 10]),
+        (['p', 'p'], [-10, -10], (255, 225, 0), [10, 10]),
         
-        (['p', 'p'], [10, 0], (255, 225, 0), [5, 5]),
-        (['p', 'p'], [-10, 0], (255, 225, 0), [5, 5]),
-        (['p', 'p'], [0, -10], (255, 225, 0), [5, 5]),
-        (['p', 'p'], [-0, 10], (255, 225, 0), [5, 5])
+        (['p', 'p'], [10, 0], (255, 225, 0), [10, 10]),
+        (['p', 'p'], [-10, 0], (255, 225, 0), [10, 10]),
+        (['p', 'p'], [0, -10], (255, 225, 0), [10, 10]),
+        (['p', 'p'], [-0, 10], (255, 225, 0), [10, 10])
     ],
     [ # Grass Grows
-        [2, config.FPS/2, (0, config.WINDOW_HEIGHT-50, config.WINDOW_WIDTH, 50)],
+        [3, config.FPS/2, (0, config.WINDOW_HEIGHT-50, config.WINDOW_WIDTH, 50)],
         (['r', config.WINDOW_HEIGHT+(config.WINDOW_HEIGHT/2)], [0, -1], (0, 255, 0), [5, config.WINDOW_HEIGHT])
     ],
     [ # Flame Thrower
-        [2, config.FPS/2, (config.WINDOW_WIDTH-50, 0, 50, config.WINDOW_HEIGHT)],
+        [2, config.FPS/5, (config.WINDOW_WIDTH-50, 0, 50, config.WINDOW_HEIGHT)],
         ([config.WINDOW_WIDTH-50, 'r'], [-2, -3], (200, 50, 50), [25, 25]),
         ([config.WINDOW_WIDTH-50, 'r'], [-1, -3], (250, 50, 50), [25, 25]),
         ([config.WINDOW_WIDTH-50, 'r'], [-3, 3], (220, 220, 50), [50, 50]),
@@ -301,10 +344,19 @@ patterns = [
         ([config.WINDOW_WIDTH-50, 'r'], [-2, 3], (200, 50, 50), [50, 50]),
         ([config.WINDOW_WIDTH-50, 'r'], [-1, -3], (250, 50, 50), [25, 25]),
         ([config.WINDOW_WIDTH-50, 'r'], [-3, -3], (220, 220, 50), [25, 25])
-        
+    ],
+    [ # Rail-Gun
+        [3, config.FPS/2, 'rail-gun'],
+        ([25, 'p'], [50, 0], (200, 200, 200), [100, 10])
+    ],
+    [ # Comet
+        [1, config.FPS, 'comet'],
+        ([config.WINDOW_WIDTH-50, 50], [-5, 5], (255, 0, 0), [100, 100]),
+        ([50, 50], [5, 5], (255, 0, 0), [100, 100])
     ]
 ]
 if __name__ == '__main__':
+    bullets = []
     clicked = False
     clock = pygame.time.Clock()
     main_menu()
